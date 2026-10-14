@@ -1,5 +1,5 @@
 import { WEEKDAY_NAMES_LONG, formatDateShort } from './dateUtils.js';
-import { colorForName } from './store.js';
+import { Store } from './store.js';
 
 export function renderDayDetail(container, date, dayIndex, sessions, callbacks) {
   container.innerHTML = '';
@@ -36,7 +36,7 @@ export function renderDayDetail(container, date, dayIndex, sessions, callbacks) 
   daySessions.forEach((session) => {
     const item = document.createElement('div');
     item.className = 'day-detail-item';
-    item.style.borderLeftColor = colorForName(session.name);
+    item.style.borderLeftColor = Store.colorForName(session.name);
     item.innerHTML = `<strong>${session.time}</strong> — ${session.name}`;
     item.addEventListener('click', () => callbacks.onSessionClick(session));
     list.appendChild(item);

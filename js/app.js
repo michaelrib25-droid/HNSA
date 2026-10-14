@@ -4,7 +4,7 @@ import {
   formatWeekRange,
   formatMinutesToTime
 } from './dateUtils.js';
-import { Store } from './store.js';
+import { Store, PALETTE } from './store.js';
 import { renderWeekGrid } from './weekGrid.js';
 import { renderDayDetail } from './dayDetail.js';
 
@@ -191,6 +191,41 @@ function showActionMenu(weekKey, session) {
       render();
     });
   }
+
+  addMenuButton(box, 'Farbe ändern', () => {
+    closeOverlay(overlay);
+    showColorDialog(session.name);
+  });
+
+  addMenuButton(box, 'Abbrechen', () => closeOverlay(overlay));
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function showColorDialog(name) {
+  const overlay = createOverlay();
+  const box = document.createElement('div');
+  box.className = 'modal-box';
+
+  const title = document.createElement('h3');
+  title.textContent = `Farbe für ${name}`;
+  box.appendChild(title);
+
+  const grid = document.createElement('div');
+  grid.className = 'color-grid';
+  PALETTE.forEach((color) => {
+    const swatch = document.createElement('button');
+    swatch.className = 'color-swatch';
+    swatch.style.background = color;
+    swatch.addEventListener('click', () => {
+      Store.setColor(name, color);
+      closeOverlay(overlay);
+      render();
+    });
+    grid.appendChild(swatch);
+  });
+  box.appendChild(grid);
 
   addMenuButton(box, 'Abbrechen', () => closeOverlay(overlay));
 

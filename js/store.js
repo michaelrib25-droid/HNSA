@@ -1,16 +1,20 @@
 const STORAGE_KEY = 'hnsa_schedule_v1';
 
 function defaultData() {
-  return { template: [], exceptions: {} };
+  return { template: [], exceptions: {}, colors: {} };
 }
 
 function genId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-const PALETTE = ['#e63946', '#f1a208', '#2a9d8f', '#457b9d', '#8338ec', '#ff6d00', '#06a77d'];
+export const PALETTE = [
+  '#e63946', '#f3722c', '#f1a208', '#588157', '#2a9d8f',
+  '#43aa8b', '#277da1', '#4361ee', '#3a0ca3', '#7209b7',
+  '#b5179e', '#f72585', '#ff6d00', '#457b9d', '#9d4edd'
+];
 
-export function colorForName(name) {
+function hashColor(name) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
@@ -24,6 +28,7 @@ function load() {
     if (!raw) return defaultData();
     const parsed = JSON.parse(raw);
     if (!parsed.template || !parsed.exceptions) return defaultData();
+    if (!parsed.colors) parsed.colors = {};
     return parsed;
   } catch (e) {
     return defaultData();
@@ -85,6 +90,15 @@ export const Store = {
       delete this.data.exceptions[weekKey][exceptionId];
       save(this.data);
     }
+  },
+
+  setColor(name, color) {
+    this.data.colors[name] = color;
+    save(this.data);
+  },
+
+  colorForName(name) {
+    return this.data.colors[name] || hashColor(name);
   },
 
   _ensureWeek(weekKey) {

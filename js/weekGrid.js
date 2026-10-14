@@ -1,5 +1,5 @@
 import { WEEKDAY_NAMES_SHORT, formatDateShort, parseTimeToMinutes } from './dateUtils.js';
-import { colorForName } from './store.js';
+import { Store } from './store.js';
 
 const GRID_START_MIN = 9 * 60;
 const GRID_END_MIN = 22 * 60;
@@ -121,7 +121,7 @@ export function renderWeekGrid(container, weekDates, sessions, callbacks) {
     block.className = 'week-grid-block';
     block.style.top = `${top}px`;
     block.style.height = `${height}px`;
-    block.style.background = colorForName(session.name);
+    block.style.background = Store.colorForName(session.name);
     block.textContent = `${session.name} ${session.time}`;
     block.addEventListener('click', (event) => {
       event.stopPropagation();

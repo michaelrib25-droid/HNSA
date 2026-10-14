@@ -201,3 +201,20 @@ html, body {
   font-size: 0.8rem;
   margin: 0;
 }
+
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+.color-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  padding: 0;
+  cursor: pointer;
+}
+.color-swatch:active {
+  border-color: #f5f5f7;
+}
