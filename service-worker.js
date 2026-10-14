@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hnsa-v7';
+const CACHE_NAME = 'hnsa-v8';
 const ASSETS = [
   './',
   './index.html',

@@ -53,7 +53,17 @@ export function renderWeekGrid(container, weekDates, sessions, callbacks) {
   weekDates.forEach((date, i) => {
     const dayBtn = document.createElement('button');
     dayBtn.className = 'week-grid-day-header';
-    dayBtn.textContent = `${WEEKDAY_NAMES_SHORT[i]} ${formatDateShort(date)}`;
+
+    const weekday = document.createElement('span');
+    weekday.className = 'week-grid-day-header-weekday';
+    weekday.textContent = WEEKDAY_NAMES_SHORT[i];
+
+    const dateLabel = document.createElement('span');
+    dateLabel.className = 'week-grid-day-header-date';
+    dateLabel.textContent = formatDateShort(date);
+
+    dayBtn.appendChild(weekday);
+    dayBtn.appendChild(dateLabel);
     dayBtn.addEventListener('click', () => callbacks.onDayHeaderClick(i));
     header.appendChild(dayBtn);
   });
