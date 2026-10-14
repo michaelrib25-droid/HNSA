@@ -1,7 +1,16 @@
 :root {
   color-scheme: dark;
 }
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  outline: none;
+}
+button:focus {
+  outline: none;
+}
 html, body {
   margin: 0;
   padding: 0;
