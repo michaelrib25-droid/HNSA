@@ -290,7 +290,22 @@ function closeOverlay(overlay) {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js');
+    navigator.serviceWorker.register('service-worker.js').then((registration) => {
+      // Proactively re-check for a new version whenever the app regains focus,
+      // since the browser's own update check only runs on navigation.
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') registration.update();
+      });
+    });
+  });
+
+  // skipWaiting() on the new worker hands it control immediately; reload once
+  // so the page actually runs the new assets instead of the ones already in memory.
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloaded) return;
+    reloaded = true;
+    window.location.reload();
   });
 }
 
