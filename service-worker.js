@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hnsa-v95e19061';
+const CACHE_NAME = 'hnsa-vd43cd7d3';
 const ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   './js/dateUtils.js',
   './js/weekGrid.js',
   './js/dayDetail.js',
+  './js/upcoming.js',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];

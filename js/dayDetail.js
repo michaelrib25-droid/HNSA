@@ -37,7 +37,8 @@ export function renderDayDetail(container, date, dayIndex, sessions, callbacks) 
     const item = document.createElement('div');
     item.className = 'day-detail-item';
     item.style.borderLeftColor = Store.colorForName(session.name);
-    item.innerHTML = `<strong>${session.time}</strong> — ${session.name}`;
+    const kindIcon = session.kind === 'moved' ? ' ↔' : session.kind === 'extra' ? ' +' : '';
+    item.innerHTML = `<strong>${session.time}</strong> — ${session.name}${kindIcon}`;
     item.addEventListener('click', () => callbacks.onSessionClick(session));
     list.appendChild(item);
   });

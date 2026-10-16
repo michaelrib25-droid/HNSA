@@ -1,3 +1,5 @@
+import { getISOWeekKey, weekdayIndexOf, eachDateInRange, parseTimeToMinutes } from './dateUtils.js';
+
 const STORAGE_KEY = 'hnsa_schedule_v1';
 
 function defaultData() {
@@ -99,6 +101,60 @@ export const Store = {
 
   colorForName(name) {
     return this.data.colors[name] || hashColor(name);
+  },
+
+  exportData() {
+    return JSON.stringify(this.data, null, 2);
+  },
+
+  importData(json) {
+    const parsed = JSON.parse(json);
+    if (!parsed || !Array.isArray(parsed.template) || typeof parsed.exceptions !== 'object') {
+      throw new Error('Ungültiges Format');
+    }
+    this.data = {
+      template: parsed.template,
+      exceptions: parsed.exceptions,
+      colors: parsed.colors || {}
+    };
+    save(this.data);
+  },
+
+  cancelRange(startDate, endDate, templateId) {
+    const entries = templateId
+      ? this.data.template.filter((e) => e.id === templateId)
+      : this.data.template;
+    for (const date of eachDateInRange(startDate, endDate)) {
+      const weekday = weekdayIndexOf(date);
+      const weekKey = getISOWeekKey(date);
+      for (const entry of entries) {
+        if (entry.weekday === weekday) {
+          this.setCancelled(weekKey, entry.id);
+        }
+      }
+    }
+  },
+
+  getUpcoming(limit = 5, from = new Date()) {
+    const result = [];
+    const fromMinutes = from.getHours() * 60 + from.getMinutes();
+    const maxDays = 60;
+    for (let i = 0; i < maxDays && result.length < limit; i++) {
+      const day = new Date(from);
+      day.setHours(0, 0, 0, 0);
+      day.setDate(day.getDate() + i);
+      const weekday = weekdayIndexOf(day);
+      const weekKey = getISOWeekKey(day);
+      const daySessions = this.getEffectiveWeek(weekKey)
+        .filter((s) => s.weekday === weekday)
+        .filter((s) => i > 0 || parseTimeToMinutes(s.time) >= fromMinutes)
+        .sort((a, b) => a.time.localeCompare(b.time));
+      for (const s of daySessions) {
+        result.push({ ...s, date: new Date(day) });
+        if (result.length >= limit) break;
+      }
+    }
+    return result;
   },
 
   _ensureWeek(weekKey) {

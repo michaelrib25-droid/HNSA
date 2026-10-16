@@ -2,16 +2,20 @@ import {
   getWeekDates,
   getISOWeekKey,
   formatWeekRange,
-  formatMinutesToTime
+  formatMinutesToTime,
+  formatDateISO,
+  parseDateISO,
+  weekdayIndexOf
 } from './dateUtils.js';
 import { Store, PALETTE } from './store.js';
 import { renderWeekGrid } from './weekGrid.js';
 import { renderDayDetail } from './dayDetail.js';
+import { renderUpcoming } from './upcoming.js';
 
 const appRoot = document.getElementById('app');
 
 let referenceDate = new Date();
-let view = 'week'; // 'week' | 'day'
+let view = 'upcoming'; // 'upcoming' | 'week' | 'day'
 let selectedDayIndex = 0;
 
 function render() {
@@ -24,33 +28,75 @@ function render() {
   const header = document.createElement('div');
   header.className = 'app-header';
 
-  const prevBtn = document.createElement('button');
-  prevBtn.textContent = '◀';
-  prevBtn.addEventListener('click', () => {
-    referenceDate = addDays(referenceDate, -7);
+  const tabs = document.createElement('div');
+  tabs.className = 'app-header-tabs';
+
+  const upcomingTab = document.createElement('button');
+  upcomingTab.textContent = 'Als Nächstes';
+  if (view === 'upcoming') upcomingTab.classList.add('active');
+  upcomingTab.addEventListener('click', () => {
+    view = 'upcoming';
     render();
   });
 
-  const label = document.createElement('span');
-  label.className = 'app-header-label';
-  label.textContent = formatWeekRange(weekDates);
-
-  const nextBtn = document.createElement('button');
-  nextBtn.textContent = '▶';
-  nextBtn.addEventListener('click', () => {
-    referenceDate = addDays(referenceDate, 7);
+  const weekTab = document.createElement('button');
+  weekTab.textContent = 'Woche';
+  if (view === 'week' || view === 'day') weekTab.classList.add('active');
+  weekTab.addEventListener('click', () => {
+    view = 'week';
     render();
   });
 
-  header.appendChild(prevBtn);
-  header.appendChild(label);
-  header.appendChild(nextBtn);
+  tabs.appendChild(upcomingTab);
+  tabs.appendChild(weekTab);
+  header.appendChild(tabs);
+
+  const menuBtn = document.createElement('button');
+  menuBtn.className = 'app-header-menu-btn';
+  menuBtn.textContent = '⋮';
+  menuBtn.addEventListener('click', () => showMainMenu());
+  header.appendChild(menuBtn);
+
   appRoot.appendChild(header);
+
+  if (view === 'week') {
+    const weekNav = document.createElement('div');
+    weekNav.className = 'week-nav';
+
+    const prevBtn = document.createElement('button');
+    prevBtn.textContent = '◀';
+    prevBtn.addEventListener('click', () => {
+      referenceDate = addDays(referenceDate, -7);
+      render();
+    });
+
+    const label = document.createElement('span');
+    label.className = 'week-nav-label';
+    label.textContent = formatWeekRange(weekDates);
+
+    const nextBtn = document.createElement('button');
+    nextBtn.textContent = '▶';
+    nextBtn.addEventListener('click', () => {
+      referenceDate = addDays(referenceDate, 7);
+      render();
+    });
+
+    weekNav.appendChild(prevBtn);
+    weekNav.appendChild(label);
+    weekNav.appendChild(nextBtn);
+    appRoot.appendChild(weekNav);
+  }
 
   const viewContainer = document.createElement('div');
   appRoot.appendChild(viewContainer);
 
-  if (view === 'week') {
+  if (view === 'upcoming') {
+    renderUpcoming(viewContainer, Store.getUpcoming(5), {
+      onSessionClick: (session) => {
+        showActionMenu(getISOWeekKey(session.date), session, session.date);
+      }
+    });
+  } else if (view === 'week') {
     renderWeekGrid(viewContainer, weekDates, sessions, {
       onDayHeaderClick: (dayIndex) => {
         selectedDayIndex = dayIndex;
@@ -61,7 +107,7 @@ function render() {
         showAddDialog(weekKey, dayIndex, formatMinutesToTime(minutes));
       },
       onSessionClick: (session) => {
-        showActionMenu(weekKey, session);
+        showActionMenu(weekKey, session, weekDates[session.weekday]);
       }
     });
   } else {
@@ -74,7 +120,7 @@ function render() {
         showAddDialog(weekKey, dayIndex, '16:00');
       },
       onSessionClick: (session) => {
-        showActionMenu(weekKey, session);
+        showActionMenu(weekKey, session, weekDates[session.weekday]);
       }
     });
   }
@@ -142,7 +188,7 @@ function showAddDialog(weekKey, weekday, time) {
   document.body.appendChild(overlay);
 }
 
-function showActionMenu(weekKey, session) {
+function showActionMenu(weekKey, session, occurrenceDate) {
   const overlay = createOverlay();
   const box = document.createElement('div');
   box.className = 'modal-box';
@@ -150,6 +196,13 @@ function showActionMenu(weekKey, session) {
   const title = document.createElement('h3');
   title.textContent = `${session.name}, ${session.time}`;
   box.appendChild(title);
+
+  if (session.kind !== 'extra') {
+    addMenuButton(box, 'Nachholen …', () => {
+      closeOverlay(overlay);
+      showRescheduleDialog(weekKey, session, occurrenceDate);
+    });
+  }
 
   if (session.kind === 'extra') {
     addMenuButton(box, 'Verschieben', () => {
@@ -261,6 +314,193 @@ function showMoveDialog(session, onConfirm) {
   addMenuButton(box, 'Übernehmen', () => {
     onConfirm(Number(daySelect.value), timeInput.value);
     closeOverlay(overlay);
+  });
+  addMenuButton(box, 'Abbrechen', () => closeOverlay(overlay));
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function showRescheduleDialog(weekKey, session, occurrenceDate) {
+  const overlay = createOverlay();
+  const box = document.createElement('div');
+  box.className = 'modal-box';
+
+  const title = document.createElement('h3');
+  title.textContent = `${session.name} nachholen`;
+  box.appendChild(title);
+
+  const dateInput = document.createElement('input');
+  dateInput.type = 'date';
+  dateInput.value = formatDateISO(occurrenceDate);
+  box.appendChild(dateInput);
+
+  const timeInput = document.createElement('input');
+  timeInput.type = 'time';
+  timeInput.value = session.time;
+  box.appendChild(timeInput);
+
+  const errorMsg = document.createElement('p');
+  errorMsg.className = 'modal-error';
+  errorMsg.textContent = 'Bitte ein Datum wählen.';
+  errorMsg.style.display = 'none';
+  box.appendChild(errorMsg);
+
+  addMenuButton(box, 'Übernehmen', () => {
+    if (!dateInput.value) {
+      errorMsg.style.display = 'block';
+      return;
+    }
+    const targetDate = parseDateISO(dateInput.value);
+    const targetWeekKey = getISOWeekKey(targetDate);
+    const targetWeekday = weekdayIndexOf(targetDate);
+    Store.setCancelled(weekKey, session.id);
+    Store.addExtraSession(targetWeekKey, session.name, targetWeekday, timeInput.value);
+    closeOverlay(overlay);
+    render();
+  });
+  addMenuButton(box, 'Abbrechen', () => closeOverlay(overlay));
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function showMainMenu() {
+  const overlay = createOverlay();
+  const box = document.createElement('div');
+  box.className = 'modal-box';
+
+  const title = document.createElement('h3');
+  title.textContent = 'Mehr';
+  box.appendChild(title);
+
+  addMenuButton(box, 'Exportieren', () => {
+    closeOverlay(overlay);
+    exportData();
+  });
+  addMenuButton(box, 'Importieren …', () => {
+    closeOverlay(overlay);
+    triggerImport();
+  });
+  addMenuButton(box, 'Pause eintragen …', () => {
+    closeOverlay(overlay);
+    showVacationDialog();
+  });
+  addMenuButton(box, 'Abbrechen', () => closeOverlay(overlay));
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function exportData() {
+  const json = Store.exportData();
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `hnsa-backup-${formatDateISO(new Date())}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function triggerImport() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => showImportConfirm(reader.result);
+    reader.readAsText(file);
+  });
+  input.click();
+}
+
+function showImportConfirm(json) {
+  const overlay = createOverlay();
+  const box = document.createElement('div');
+  box.className = 'modal-box';
+
+  const title = document.createElement('h3');
+  title.textContent = 'Plan importieren';
+  box.appendChild(title);
+
+  const warning = document.createElement('p');
+  warning.textContent = 'Ersetzt den kompletten aktuellen Plan. Fortfahren?';
+  box.appendChild(warning);
+
+  const errorMsg = document.createElement('p');
+  errorMsg.className = 'modal-error';
+  errorMsg.textContent = 'Die Datei konnte nicht gelesen werden.';
+  errorMsg.style.display = 'none';
+  box.appendChild(errorMsg);
+
+  addMenuButton(box, 'Importieren', () => {
+    try {
+      Store.importData(json);
+      closeOverlay(overlay);
+      render();
+    } catch (e) {
+      errorMsg.style.display = 'block';
+    }
+  });
+  addMenuButton(box, 'Abbrechen', () => closeOverlay(overlay));
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function showVacationDialog() {
+  const overlay = createOverlay();
+  const box = document.createElement('div');
+  box.className = 'modal-box';
+
+  const title = document.createElement('h3');
+  title.textContent = 'Pause eintragen';
+  box.appendChild(title);
+
+  const startInput = document.createElement('input');
+  startInput.type = 'date';
+  startInput.value = formatDateISO(new Date());
+  box.appendChild(startInput);
+
+  const endInput = document.createElement('input');
+  endInput.type = 'date';
+  endInput.value = formatDateISO(new Date());
+  box.appendChild(endInput);
+
+  const studentSelect = document.createElement('select');
+  const allOpt = document.createElement('option');
+  allOpt.value = '';
+  allOpt.textContent = 'Alle Schüler';
+  studentSelect.appendChild(allOpt);
+  Store.data.template.forEach((entry) => {
+    const opt = document.createElement('option');
+    opt.value = entry.id;
+    opt.textContent = entry.name;
+    studentSelect.appendChild(opt);
+  });
+  box.appendChild(studentSelect);
+
+  const errorMsg = document.createElement('p');
+  errorMsg.className = 'modal-error';
+  errorMsg.textContent = 'Enddatum darf nicht vor dem Startdatum liegen.';
+  errorMsg.style.display = 'none';
+  box.appendChild(errorMsg);
+
+  addMenuButton(box, 'Übernehmen', () => {
+    const start = parseDateISO(startInput.value);
+    const end = parseDateISO(endInput.value);
+    if (end < start) {
+      errorMsg.style.display = 'block';
+      return;
+    }
+    Store.cancelRange(start, end, studentSelect.value || null);
+    closeOverlay(overlay);
+    render();
   });
   addMenuButton(box, 'Abbrechen', () => closeOverlay(overlay));
 

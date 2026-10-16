@@ -122,7 +122,8 @@ export function renderWeekGrid(container, weekDates, sessions, callbacks) {
     block.style.top = `${top}px`;
     block.style.height = `${height}px`;
     block.style.background = Store.colorForName(session.name);
-    block.textContent = `${session.name} ${session.time}`;
+    const kindIcon = session.kind === 'moved' ? ' ↔' : session.kind === 'extra' ? ' +' : '';
+    block.textContent = `${session.name} ${session.time}${kindIcon}`;
     block.addEventListener('click', (event) => {
       event.stopPropagation();
       callbacks.onSessionClick(session);

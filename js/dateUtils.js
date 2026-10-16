@@ -59,3 +59,33 @@ export function formatMinutesToTime(totalMinutes) {
   const m = Math.round(totalMinutes % 60);
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
+
+export function weekdayIndexOf(date) {
+  const day = date.getDay(); // 0 = Sonntag ... 6 = Samstag
+  return day === 0 ? 6 : day - 1;
+}
+
+export function eachDateInRange(startDate, endDate) {
+  const dates = [];
+  const cur = new Date(startDate);
+  cur.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+  while (cur <= end) {
+    dates.push(new Date(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
+export function formatDateISO(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+export function parseDateISO(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
