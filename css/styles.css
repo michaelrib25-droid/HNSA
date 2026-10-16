@@ -84,6 +84,21 @@ html, body {
   font-weight: 600;
 }
 
+@keyframes slide-in-from-right {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slide-in-from-left {
+  from { transform: translateX(-24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.week-grid-enter-next {
+  animation: slide-in-from-right 180ms ease-out;
+}
+.week-grid-enter-prev {
+  animation: slide-in-from-left 180ms ease-out;
+}
+
 .week-grid-hint {
   text-align: center;
   color: #a0a0b0;

@@ -17,6 +17,7 @@ const appRoot = document.getElementById('app');
 let referenceDate = new Date();
 let view = 'upcoming'; // 'upcoming' | 'week' | 'day'
 let selectedDayIndex = 0;
+let weekNavDirection = null; // 'prev' | 'next' | null - fuer die Slide-Animation beim Wochenwechsel
 
 function render() {
   appRoot.innerHTML = '';
@@ -66,6 +67,7 @@ function render() {
     const prevBtn = document.createElement('button');
     prevBtn.textContent = '◀';
     prevBtn.addEventListener('click', () => {
+      weekNavDirection = 'prev';
       referenceDate = addDays(referenceDate, -7);
       render();
     });
@@ -77,13 +79,22 @@ function render() {
     const nextBtn = document.createElement('button');
     nextBtn.textContent = '▶';
     nextBtn.addEventListener('click', () => {
+      weekNavDirection = 'next';
       referenceDate = addDays(referenceDate, 7);
+      render();
+    });
+
+    const todayBtn = document.createElement('button');
+    todayBtn.textContent = 'Heute';
+    todayBtn.addEventListener('click', () => {
+      referenceDate = new Date();
       render();
     });
 
     weekNav.appendChild(prevBtn);
     weekNav.appendChild(label);
     weekNav.appendChild(nextBtn);
+    weekNav.appendChild(todayBtn);
     appRoot.appendChild(weekNav);
   }
 
@@ -108,8 +119,17 @@ function render() {
       },
       onSessionClick: (session) => {
         showActionMenu(weekKey, session, weekDates[session.weekday]);
+      },
+      onSwipe: (direction) => {
+        weekNavDirection = direction;
+        referenceDate = addDays(referenceDate, direction === 'next' ? 7 : -7);
+        render();
       }
     });
+    if (weekNavDirection) {
+      viewContainer.classList.add(weekNavDirection === 'next' ? 'week-grid-enter-next' : 'week-grid-enter-prev');
+      weekNavDirection = null;
+    }
   } else {
     renderDayDetail(viewContainer, weekDates[selectedDayIndex], selectedDayIndex, sessions, {
       onBack: () => {
@@ -144,7 +164,17 @@ function showAddDialog(weekKey, weekday, time) {
   const nameInput = document.createElement('input');
   nameInput.type = 'text';
   nameInput.placeholder = 'Name';
+  nameInput.setAttribute('list', 'student-names');
   box.appendChild(nameInput);
+
+  const datalist = document.createElement('datalist');
+  datalist.id = 'student-names';
+  [...new Set(Store.data.template.map((e) => e.name))].forEach((studentName) => {
+    const opt = document.createElement('option');
+    opt.value = studentName;
+    datalist.appendChild(opt);
+  });
+  box.appendChild(datalist);
 
   const timeInput = document.createElement('input');
   timeInput.type = 'time';
@@ -385,6 +415,36 @@ function showMainMenu() {
   addMenuButton(box, 'Pause eintragen …', () => {
     closeOverlay(overlay);
     showVacationDialog();
+  });
+  if (view === 'week' || view === 'day') {
+    addMenuButton(box, 'Diese Woche zurücksetzen …', () => {
+      closeOverlay(overlay);
+      showResetWeekConfirm(getISOWeekKey(referenceDate), formatWeekRange(getWeekDates(referenceDate)));
+    });
+  }
+  addMenuButton(box, 'Abbrechen', () => closeOverlay(overlay));
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function showResetWeekConfirm(weekKey, weekLabel) {
+  const overlay = createOverlay();
+  const box = document.createElement('div');
+  box.className = 'modal-box';
+
+  const title = document.createElement('h3');
+  title.textContent = 'Woche zurücksetzen';
+  box.appendChild(title);
+
+  const warning = document.createElement('p');
+  warning.textContent = `Alle Absagen, Verschiebungen und Extra-Termine für ${weekLabel} werden verworfen. Fortfahren?`;
+  box.appendChild(warning);
+
+  addMenuButton(box, 'Zurücksetzen', () => {
+    Store.resetWeek(weekKey);
+    closeOverlay(overlay);
+    render();
   });
   addMenuButton(box, 'Abbrechen', () => closeOverlay(overlay));
 

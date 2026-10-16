@@ -32,9 +32,25 @@ function fractionToMinutes(fraction) {
   return COMPRESSED_END_MIN + (w - COMPRESSED_WEIGHT);
 }
 
+const SWIPE_THRESHOLD_PX = 50;
+
 export function renderWeekGrid(container, weekDates, sessions, callbacks) {
   container.innerHTML = '';
   container.className = 'week-grid';
+
+  let touchStart = null;
+  container.addEventListener('touchstart', (event) => {
+    touchStart = { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY };
+  }, { passive: true });
+  container.addEventListener('touchend', (event) => {
+    if (!touchStart) return;
+    const dx = event.changedTouches[0].clientX - touchStart.x;
+    const dy = event.changedTouches[0].clientY - touchStart.y;
+    touchStart = null;
+    if (Math.abs(dx) >= SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      callbacks.onSwipe(dx > 0 ? 'prev' : 'next');
+    }
+  }, { passive: true });
 
   if (sessions.length === 0) {
     const hint = document.createElement('p');

@@ -120,6 +120,11 @@ export const Store = {
     save(this.data);
   },
 
+  resetWeek(weekKey) {
+    delete this.data.exceptions[weekKey];
+    save(this.data);
+  },
+
   cancelRange(startDate, endDate, templateId) {
     const entries = templateId
       ? this.data.template.filter((e) => e.id === templateId)
