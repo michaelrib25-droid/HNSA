@@ -38,6 +38,7 @@ export function renderDayDetail(container, date, dayIndex, sessions, callbacks) 
   daySessions.forEach((session) => {
     const item = document.createElement('div');
     item.className = 'day-detail-item';
+    item.dataset.sessionId = session.id;
     item.style.borderLeftColor = Store.colorForName(session.name);
     item.innerHTML = `<strong>${session.time}</strong> — ${session.name}${kindIcon(session.kind)}`;
     item.addEventListener('click', () => callbacks.onSessionClick(session));

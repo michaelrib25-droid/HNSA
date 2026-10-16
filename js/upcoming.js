@@ -15,9 +15,11 @@ export function renderUpcoming(container, sessions, callbacks) {
     list.appendChild(empty);
   }
 
-  sessions.forEach((session) => {
+  sessions.forEach((session, i) => {
     const item = document.createElement('div');
-    item.className = 'upcoming-item';
+    item.className = 'upcoming-item upcoming-item-in';
+    item.style.animationDelay = `${i * 30}ms`;
+    item.dataset.sessionId = session.id;
     item.style.borderLeftColor = Store.colorForName(session.name);
 
     const when = document.createElement('div');

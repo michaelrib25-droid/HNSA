@@ -1,4 +1,4 @@
-import { WEEKDAY_NAMES_SHORT, formatDateShort, parseTimeToMinutes } from './dateUtils.js';
+import { WEEKDAY_NAMES_SHORT, formatDateShort, parseTimeToMinutes, getMonday, weekdayIndexOf } from './dateUtils.js';
 import { Store, kindIcon } from './store.js';
 import { getHoliday } from './holidays.js';
 
@@ -40,14 +40,39 @@ export function renderWeekGrid(container, weekDates, sessions, callbacks) {
   container.className = 'week-grid';
 
   let touchStart = null;
+  let dragging = false;
   container.addEventListener('touchstart', (event) => {
     touchStart = { x: event.changedTouches[0].clientX, y: event.changedTouches[0].clientY };
+    dragging = false;
+  }, { passive: true });
+  container.addEventListener('touchmove', (event) => {
+    if (!touchStart) return;
+    const dx = event.changedTouches[0].clientX - touchStart.x;
+    const dy = event.changedTouches[0].clientY - touchStart.y;
+    if (!dragging) {
+      if (Math.abs(dy) > Math.abs(dx)) {
+        touchStart = null; // eindeutig vertikales Scrollen - Drag abbrechen
+        return;
+      }
+      if (Math.abs(dx) > 8) dragging = true;
+    }
+    if (dragging) {
+      // gedaempft (0.6x), damit es wie Widerstand statt freiem Mitziehen wirkt
+      const damped = Math.sign(dx) * Math.min(Math.abs(dx) * 0.6, 60);
+      body.style.transform = `translateX(${damped}px)`;
+    }
   }, { passive: true });
   container.addEventListener('touchend', (event) => {
     if (!touchStart) return;
     const dx = event.changedTouches[0].clientX - touchStart.x;
     const dy = event.changedTouches[0].clientY - touchStart.y;
     touchStart = null;
+    if (dragging) {
+      body.style.transition = 'transform 160ms ease-out';
+      body.style.transform = '';
+      setTimeout(() => { body.style.transition = ''; }, 170);
+    }
+    dragging = false;
     if (Math.abs(dx) >= SWIPE_THRESHOLD_PX && Math.abs(dx) > Math.abs(dy) * 1.5) {
       callbacks.onSwipe(dx > 0 ? 'prev' : 'next');
     }
@@ -147,6 +172,7 @@ export function renderWeekGrid(container, weekDates, sessions, callbacks) {
 
     const block = document.createElement('div');
     block.className = 'week-grid-block';
+    block.dataset.sessionId = session.id;
     block.style.top = `${top}px`;
     block.style.height = `${height}px`;
     block.style.background = Store.colorForName(session.name);
@@ -159,6 +185,17 @@ export function renderWeekGrid(container, weekDates, sessions, callbacks) {
 
     body.children[session.weekday + 1].appendChild(block);
   });
+
+  const now = new Date();
+  if (getMonday(now).getTime() === weekDates[0].getTime()) {
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    if (nowMinutes >= GRID_START_MIN && nowMinutes <= GRID_END_MIN) {
+      const nowLine = document.createElement('div');
+      nowLine.className = 'week-grid-now-line';
+      nowLine.style.top = `${minutesToY(nowMinutes)}px`;
+      body.children[weekdayIndexOf(now) + 1].appendChild(nowLine);
+    }
+  }
 }
 
 function snapToQuarterHour(minutes) {

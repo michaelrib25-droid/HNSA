@@ -163,6 +163,19 @@ function render() {
   }
 }
 
+// Laesst das DOM-Element eines geloeschten/abgesagten Termins kurz ausblenden,
+// bevor render() es (durch das volle Neuaufbauen des DOMs) ersetzt - sonst
+// verschwindet der Termin hart, ohne dass die Aktion sichtbar bestaetigt wird.
+function fadeOutAndRender(sessionId) {
+  const el = document.querySelector(`[data-session-id="${CSS.escape(sessionId)}"]`);
+  if (!el) {
+    render();
+    return;
+  }
+  el.classList.add('session-fade-out');
+  setTimeout(render, 160);
+}
+
 function addDays(date, days) {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
@@ -264,13 +277,13 @@ function showActionMenu(weekKey, session, occurrenceDate) {
     addMenuButton(box, 'Löschen', () => {
       Store.removeException(weekKey, session.id);
       closeOverlay(overlay);
-      render();
+      fadeOutAndRender(session.id);
     });
   } else {
     addMenuButton(box, 'Diese Woche absagen', () => {
       Store.setCancelled(weekKey, session.id);
       closeOverlay(overlay);
-      render();
+      fadeOutAndRender(session.id);
     });
     addMenuButton(box, 'Diese Woche verschieben', () => {
       closeOverlay(overlay);
@@ -289,7 +302,7 @@ function showActionMenu(weekKey, session, occurrenceDate) {
     addMenuButton(box, 'Komplett aus Plan löschen', () => {
       Store.removeTemplateEntry(session.id);
       closeOverlay(overlay);
-      render();
+      fadeOutAndRender(session.id);
     });
   }
 
@@ -313,12 +326,20 @@ function showColorDialog(name) {
   title.textContent = `Farbe für ${name}`;
   box.appendChild(title);
 
+  const currentColor = Store.colorForName(name);
   const grid = document.createElement('div');
   grid.className = 'color-grid';
   PALETTE.forEach((color) => {
     const swatch = document.createElement('button');
     swatch.className = 'color-swatch';
     swatch.style.background = color;
+    if (color === currentColor) {
+      swatch.classList.add('selected');
+      const check = document.createElement('span');
+      check.className = 'color-swatch-check';
+      check.textContent = '✓';
+      swatch.appendChild(check);
+    }
     swatch.addEventListener('click', () => {
       Store.setColor(name, color);
       closeOverlay(overlay);
@@ -652,5 +673,11 @@ if ('serviceWorker' in navigator) {
     window.location.reload();
   });
 }
+
+// Haelt die Jetzt-Linie im Wochenraster aktuell, auch wenn die App einfach nur
+// offen im Hintergrund liegt und niemand interagiert.
+setInterval(() => {
+  if (view === 'week' && !document.querySelector('.modal-overlay')) render();
+}, 60000);
 
 render();
