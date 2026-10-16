@@ -24,12 +24,12 @@ Full design spec: `docs/superpowers/specs/2026-10-14-hnsa-stundenplan-design.md`
 
 Hosted on GitHub Pages. Deploy = commit + push to `main`; Pages rebuilds automatically.
 
-Unlike the sibling HTPA project, there is **no git hook auto-bumping the cache version**
-here. `CACHE_NAME` in `service-worker.js` (currently `hnsa-v11`) must be bumped by hand
-in the same commit whenever any cached app file (`index.html`, `manifest.json`,
-`css/styles.css`, any `js/*.js`) changes — otherwise the installed PWA keeps serving the
-stale cached version after the Pages rebuild. Always push after committing so Pages
-rebuilds and the phone PWA updates.
+A `pre-commit` hook (`.git/hooks/pre-commit`, not tracked in the repo) auto-bumps
+`CACHE_NAME` in `service-worker.js` on every commit: it hashes the content of the files
+listed in `ASSETS` and rewrites `CACHE_NAME` to `hnsa-v<hash>` if it changed, staging the
+file automatically. No manual bump is needed — just make sure the hook is present
+locally (it's not version-controlled, so a fresh clone won't have it). Always push after
+committing so Pages rebuilds and the phone PWA updates.
 
 ## Architecture
 
