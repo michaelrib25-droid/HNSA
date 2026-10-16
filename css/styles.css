@@ -149,6 +149,16 @@ html, body {
   font-size: 0.65rem;
   text-align: center;
 }
+.week-grid-day-header.is-holiday {
+  background: rgba(234, 179, 8, 0.18);
+  border-bottom-color: rgba(234, 179, 8, 0.4);
+}
+.week-grid-day-header-holiday {
+  font-size: 0.48rem;
+  line-height: 1.15;
+  color: #eab308;
+  margin-top: 1px;
+}
 .week-grid-body {
   display: flex;
   flex: 1;

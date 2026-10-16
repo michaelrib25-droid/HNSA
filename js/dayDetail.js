@@ -1,5 +1,6 @@
 import { WEEKDAY_NAMES_LONG, formatDateShort } from './dateUtils.js';
 import { Store } from './store.js';
+import { getHoliday } from './holidays.js';
 
 export function renderDayDetail(container, date, dayIndex, sessions, callbacks) {
   container.innerHTML = '';
@@ -13,8 +14,9 @@ export function renderDayDetail(container, date, dayIndex, sessions, callbacks) 
   backBtn.addEventListener('click', () => callbacks.onBack());
   header.appendChild(backBtn);
 
+  const holidayName = getHoliday(date);
   const title = document.createElement('h2');
-  title.textContent = `${WEEKDAY_NAMES_LONG[dayIndex]}, ${formatDateShort(date)}`;
+  title.textContent = `${WEEKDAY_NAMES_LONG[dayIndex]}, ${formatDateShort(date)}${holidayName ? ` — ${holidayName}` : ''}`;
   header.appendChild(title);
 
   container.appendChild(header);

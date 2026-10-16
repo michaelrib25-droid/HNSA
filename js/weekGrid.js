@@ -1,5 +1,6 @@
 import { WEEKDAY_NAMES_SHORT, formatDateShort, parseTimeToMinutes } from './dateUtils.js';
 import { Store } from './store.js';
+import { getHoliday } from './holidays.js';
 
 const GRID_START_MIN = 9 * 60;
 const GRID_END_MIN = 22 * 60;
@@ -70,6 +71,9 @@ export function renderWeekGrid(container, weekDates, sessions, callbacks) {
     const dayBtn = document.createElement('button');
     dayBtn.className = 'week-grid-day-header';
 
+    const holidayName = getHoliday(date);
+    if (holidayName) dayBtn.classList.add('is-holiday');
+
     const weekday = document.createElement('span');
     weekday.className = 'week-grid-day-header-weekday';
     weekday.textContent = WEEKDAY_NAMES_SHORT[i];
@@ -80,6 +84,14 @@ export function renderWeekGrid(container, weekDates, sessions, callbacks) {
 
     dayBtn.appendChild(weekday);
     dayBtn.appendChild(dateLabel);
+
+    if (holidayName) {
+      const holidayLabel = document.createElement('span');
+      holidayLabel.className = 'week-grid-day-header-holiday';
+      holidayLabel.textContent = holidayName;
+      dayBtn.appendChild(holidayLabel);
+    }
+
     dayBtn.addEventListener('click', () => callbacks.onDayHeaderClick(i));
     header.appendChild(dayBtn);
   });
