@@ -1,5 +1,5 @@
 import { WEEKDAY_NAMES_SHORT, formatDateShort } from './dateUtils.js';
-import { Store } from './store.js';
+import { Store, kindIcon } from './store.js';
 
 export function renderUpcoming(container, sessions, callbacks) {
   container.innerHTML = '';
@@ -20,15 +20,13 @@ export function renderUpcoming(container, sessions, callbacks) {
     item.className = 'upcoming-item';
     item.style.borderLeftColor = Store.colorForName(session.name);
 
-    const kindIcon = session.kind === 'moved' ? ' ↔' : session.kind === 'extra' ? ' +' : '';
-
     const when = document.createElement('div');
     when.className = 'upcoming-item-when';
     when.textContent = `${WEEKDAY_NAMES_SHORT[session.weekday]}, ${formatDateShort(session.date)} · ${session.time}`;
 
     const name = document.createElement('div');
     name.className = 'upcoming-item-name';
-    name.textContent = `${session.name}${kindIcon}`;
+    name.textContent = `${session.name}${kindIcon(session.kind)}`;
 
     item.appendChild(when);
     item.appendChild(name);

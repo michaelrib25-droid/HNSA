@@ -1,4 +1,4 @@
-import { getISOWeekKey, weekdayIndexOf, eachDateInRange, parseTimeToMinutes } from './dateUtils.js';
+import { getISOWeekKey, eachDateInRange, parseTimeToMinutes, getISOWeekMonday, weekdayIndexOf } from './dateUtils.js';
 
 const STORAGE_KEY = 'hnsa_schedule_v1';
 
@@ -10,10 +10,11 @@ function genId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+// Kategorische Palette fuer bis zu 8 Schueler, validiert auf CVD-Sicherheit und
+// Kontrast gegen den dunklen Seitenhintergrund (#22223b) - siehe dataviz-Skill.
 export const PALETTE = [
-  '#e63946', '#f3722c', '#f1a208', '#588157', '#2a9d8f',
-  '#43aa8b', '#277da1', '#4361ee', '#3a0ca3', '#7209b7',
-  '#b5179e', '#f72585', '#ff6d00', '#457b9d', '#9d4edd'
+  '#3987e5', '#d95926', '#199e70', '#c98500',
+  '#d55181', '#008300', '#9085e9', '#e66767'
 ];
 
 function hashColor(name) {
@@ -22,6 +23,45 @@ function hashColor(name) {
     hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   }
   return PALETTE[hash % PALETTE.length];
+}
+
+function channelLuminance(c) {
+  c = c / 255;
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return 0.2126 * channelLuminance(r) + 0.7152 * channelLuminance(g) + 0.0722 * channelLuminance(b);
+}
+
+function contrastRatio(hexA, hexB) {
+  const l1 = relativeLuminance(hexA);
+  const l2 = relativeLuminance(hexB);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+const DARK_TEXT = '#1a1a2e';
+const LIGHT_TEXT = '#ffffff';
+
+function bestTextColorFor(backgroundHex) {
+  return contrastRatio(DARK_TEXT, backgroundHex) >= contrastRatio(LIGHT_TEXT, backgroundHex) ? DARK_TEXT : LIGHT_TEXT;
+}
+
+export function kindIcon(kind) {
+  return kind === 'moved' ? ' ↔' : kind === 'extra' ? ' +' : '';
+}
+
+function isValidTemplateEntry(entry) {
+  return !!entry
+    && typeof entry.id === 'string'
+    && typeof entry.name === 'string' && entry.name.trim().length > 0
+    && Number.isInteger(entry.weekday) && entry.weekday >= 0 && entry.weekday <= 6
+    && typeof entry.time === 'string' && /^\d{2}:\d{2}$/.test(entry.time);
 }
 
 function load() {
@@ -47,6 +87,10 @@ function save(data) {
 
 export const Store = {
   data: load(),
+
+  getTemplateEntries() {
+    return this.data.template;
+  },
 
   addTemplateEntry(name, weekday, time) {
     const entry = { id: genId('s'), name, weekday, time };
@@ -103,13 +147,20 @@ export const Store = {
     return this.data.colors[name] || hashColor(name);
   },
 
+  textColorForName(name) {
+    return bestTextColorFor(this.colorForName(name));
+  },
+
   exportData() {
     return JSON.stringify(this.data, null, 2);
   },
 
   importData(json) {
     const parsed = JSON.parse(json);
-    if (!parsed || !Array.isArray(parsed.template) || typeof parsed.exceptions !== 'object') {
+    if (!parsed || !Array.isArray(parsed.template) || typeof parsed.exceptions !== 'object' || parsed.exceptions === null) {
+      throw new Error('Ungültiges Format');
+    }
+    if (!parsed.template.every(isValidTemplateEntry)) {
       throw new Error('Ungültiges Format');
     }
     this.data = {
@@ -126,18 +177,26 @@ export const Store = {
   },
 
   cancelRange(startDate, endDate, templateId) {
-    const entries = templateId
-      ? this.data.template.filter((e) => e.id === templateId)
-      : this.data.template;
-    for (const date of eachDateInRange(startDate, endDate)) {
-      const weekday = weekdayIndexOf(date);
-      const weekKey = getISOWeekKey(date);
-      for (const entry of entries) {
-        if (entry.weekday === weekday) {
-          this.setCancelled(weekKey, entry.id);
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
+
+    const weekKeys = new Set(eachDateInRange(start, end).map((d) => getISOWeekKey(d)));
+    for (const weekKey of weekKeys) {
+      const monday = getISOWeekMonday(weekKey);
+      for (const session of this.getEffectiveWeek(weekKey)) {
+        if (session.kind === 'extra') continue;
+        if (templateId && session.id !== templateId) continue;
+        const occurrence = new Date(monday);
+        occurrence.setDate(monday.getDate() + session.weekday);
+        if (occurrence >= start && occurrence <= end) {
+          this._ensureWeek(weekKey);
+          this.data.exceptions[weekKey][session.id] = { type: 'cancelled' };
         }
       }
     }
+    save(this.data);
   },
 
   getUpcoming(limit = 5, from = new Date()) {

@@ -89,3 +89,15 @@ export function parseDateISO(str) {
   const [y, m, d] = str.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
+
+export function getISOWeekMonday(weekKey) {
+  const [yearStr, weekStr] = weekKey.split('-W');
+  const year = Number(yearStr);
+  const week = Number(weekStr);
+  const jan4 = new Date(year, 0, 4);
+  const week1Monday = new Date(jan4);
+  week1Monday.setDate(jan4.getDate() - weekdayIndexOf(jan4));
+  const monday = new Date(week1Monday);
+  monday.setDate(week1Monday.getDate() + (week - 1) * 7);
+  return monday;
+}

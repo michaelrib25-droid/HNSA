@@ -1,5 +1,5 @@
 import { WEEKDAY_NAMES_LONG, formatDateShort } from './dateUtils.js';
-import { Store } from './store.js';
+import { Store, kindIcon } from './store.js';
 import { getHoliday } from './holidays.js';
 
 export function renderDayDetail(container, date, dayIndex, sessions, callbacks) {
@@ -39,8 +39,7 @@ export function renderDayDetail(container, date, dayIndex, sessions, callbacks) 
     const item = document.createElement('div');
     item.className = 'day-detail-item';
     item.style.borderLeftColor = Store.colorForName(session.name);
-    const kindIcon = session.kind === 'moved' ? ' ↔' : session.kind === 'extra' ? ' +' : '';
-    item.innerHTML = `<strong>${session.time}</strong> — ${session.name}${kindIcon}`;
+    item.innerHTML = `<strong>${session.time}</strong> — ${session.name}${kindIcon(session.kind)}`;
     item.addEventListener('click', () => callbacks.onSessionClick(session));
     list.appendChild(item);
   });

@@ -18,6 +18,7 @@ let referenceDate = new Date();
 let view = 'upcoming'; // 'upcoming' | 'week' | 'day'
 let selectedDayIndex = 0;
 let weekNavDirection = null; // 'prev' | 'next' | null - fuer die Slide-Animation beim Wochenwechsel
+let pendingReload = false; // true, wenn ein SW-Update auf das Schliessen eines offenen Dialogs wartet
 
 function render() {
   appRoot.innerHTML = '';
@@ -60,7 +61,7 @@ function render() {
 
   appRoot.appendChild(header);
 
-  if (view === 'week') {
+  if (view === 'week' || view === 'day') {
     const weekNav = document.createElement('div');
     weekNav.className = 'week-nav';
 
@@ -131,6 +132,7 @@ function render() {
       weekNavDirection = null;
     }
   } else {
+    weekNavDirection = null; // Slide-Animation ist nur fuer die Rasteransicht gedacht
     renderDayDetail(viewContainer, weekDates[selectedDayIndex], selectedDayIndex, sessions, {
       onBack: () => {
         view = 'week';
@@ -169,7 +171,7 @@ function showAddDialog(weekKey, weekday, time) {
 
   const datalist = document.createElement('datalist');
   datalist.id = 'student-names';
-  [...new Set(Store.data.template.map((e) => e.name))].forEach((studentName) => {
+  [...new Set(Store.getTemplateEntries().map((e) => e.name))].forEach((studentName) => {
     const opt = document.createElement('option');
     opt.value = studentName;
     datalist.appendChild(opt);
@@ -178,6 +180,7 @@ function showAddDialog(weekKey, weekday, time) {
 
   const timeInput = document.createElement('input');
   timeInput.type = 'time';
+  timeInput.step = '900';
   timeInput.value = time;
   box.appendChild(timeInput);
 
@@ -338,6 +341,7 @@ function showMoveDialog(session, onConfirm) {
 
   const timeInput = document.createElement('input');
   timeInput.type = 'time';
+  timeInput.step = '900';
   timeInput.value = session.time;
   box.appendChild(timeInput);
 
@@ -367,6 +371,7 @@ function showRescheduleDialog(weekKey, session, occurrenceDate) {
 
   const timeInput = document.createElement('input');
   timeInput.type = 'time';
+  timeInput.step = '900';
   timeInput.value = session.time;
   box.appendChild(timeInput);
 
@@ -416,6 +421,12 @@ function showMainMenu() {
     closeOverlay(overlay);
     showVacationDialog();
   });
+  if (view === 'week') {
+    addMenuButton(box, 'Plan drucken / als PDF …', () => {
+      closeOverlay(overlay);
+      window.print();
+    });
+  }
   if (view === 'week' || view === 'day') {
     addMenuButton(box, 'Diese Woche zurücksetzen …', () => {
       closeOverlay(overlay);
@@ -501,8 +512,8 @@ function showImportConfirm(json) {
   addMenuButton(box, 'Importieren', () => {
     try {
       Store.importData(json);
-      closeOverlay(overlay);
       render();
+      closeOverlay(overlay);
     } catch (e) {
       errorMsg.style.display = 'block';
     }
@@ -537,7 +548,7 @@ function showVacationDialog() {
   allOpt.value = '';
   allOpt.textContent = 'Alle Schüler';
   studentSelect.appendChild(allOpt);
-  Store.data.template.forEach((entry) => {
+  Store.getTemplateEntries().forEach((entry) => {
     const opt = document.createElement('option');
     opt.value = entry.id;
     opt.textContent = entry.name;
@@ -586,7 +597,25 @@ function createOverlay() {
 
 function closeOverlay(overlay) {
   overlay.remove();
+  if (pendingReload) {
+    // Verzoegert pruefen: viele Aktionen schliessen einen Dialog nur, um sofort
+    // den naechsten zu oeffnen (z. B. "Nachholen" -> Termindialog); erst wenn
+    // nach diesem Tick wirklich kein Dialog mehr offen ist, wird neu geladen.
+    setTimeout(() => {
+      if (pendingReload && !document.querySelector('.modal-overlay')) {
+        window.location.reload();
+      }
+    }, 0);
+  }
 }
+
+// Scrollt ein fokussiertes Eingabefeld in einem Dialog in den sichtbaren Bereich,
+// damit die Bildschirmtastatur auf dem Handy es nicht verdeckt.
+document.addEventListener('focusin', (event) => {
+  if (event.target.closest('.modal-box')) {
+    setTimeout(() => event.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300);
+  }
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -601,9 +630,15 @@ if ('serviceWorker' in navigator) {
 
   // skipWaiting() on the new worker hands it control immediately; reload once
   // so the page actually runs the new assets instead of the ones already in memory.
+  // Falls gerade ein Dialog offen ist (z. B. mitten in der Eingabe), wird der Reload
+  // zurueckgestellt, bis der Dialog geschlossen wird (siehe closeOverlay).
   let reloaded = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (reloaded) return;
+    if (document.querySelector('.modal-overlay')) {
+      pendingReload = true;
+      return;
+    }
     reloaded = true;
     window.location.reload();
   });

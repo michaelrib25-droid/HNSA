@@ -1,5 +1,5 @@
 import { WEEKDAY_NAMES_SHORT, formatDateShort, parseTimeToMinutes } from './dateUtils.js';
-import { Store } from './store.js';
+import { Store, kindIcon } from './store.js';
 import { getHoliday } from './holidays.js';
 
 const GRID_START_MIN = 9 * 60;
@@ -150,8 +150,8 @@ export function renderWeekGrid(container, weekDates, sessions, callbacks) {
     block.style.top = `${top}px`;
     block.style.height = `${height}px`;
     block.style.background = Store.colorForName(session.name);
-    const kindIcon = session.kind === 'moved' ? ' ↔' : session.kind === 'extra' ? ' +' : '';
-    block.textContent = `${session.name} ${session.time}${kindIcon}`;
+    block.style.color = Store.textColorForName(session.name);
+    block.textContent = `${session.name} ${session.time}${kindIcon(session.kind)}`;
     block.addEventListener('click', (event) => {
       event.stopPropagation();
       callbacks.onSessionClick(session);
