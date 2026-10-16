@@ -18,6 +18,8 @@ let referenceDate = new Date();
 let view = 'upcoming'; // 'upcoming' | 'week' | 'day'
 let selectedDayIndex = 0;
 let weekNavDirection = null; // 'prev' | 'next' | null - fuer die Slide-Animation beim Wochenwechsel
+let lastTabGroup = null; // 'upcoming' | 'week' | null - fuer die Slide-Animation beim Tab-Wechsel
+let todayJustPressed = false; // true direkt nach Klick auf "Heute" - loest die Press-Flash-Animation aus
 let pendingReload = false; // true, wenn ein SW-Update auf das Schliessen eines offenen Dialogs wartet
 
 function render() {
@@ -86,8 +88,14 @@ function render() {
     });
 
     const todayBtn = document.createElement('button');
+    todayBtn.className = 'week-nav-today-btn';
     todayBtn.textContent = 'Heute';
+    if (todayJustPressed) {
+      todayBtn.classList.add('btn-press-flash');
+      todayJustPressed = false;
+    }
     todayBtn.addEventListener('click', () => {
+      todayJustPressed = true;
       referenceDate = new Date();
       render();
     });
@@ -102,12 +110,17 @@ function render() {
   const viewContainer = document.createElement('div');
   appRoot.appendChild(viewContainer);
 
+  const tabGroup = view === 'upcoming' ? 'upcoming' : 'week';
+  const tabSwitched = lastTabGroup !== null && lastTabGroup !== tabGroup;
+  lastTabGroup = tabGroup;
+
   if (view === 'upcoming') {
     renderUpcoming(viewContainer, Store.getUpcoming(5), {
       onSessionClick: (session) => {
         showActionMenu(getISOWeekKey(session.date), session, session.date);
       }
     });
+    if (tabSwitched) viewContainer.classList.add('view-enter-left');
   } else if (view === 'week') {
     renderWeekGrid(viewContainer, weekDates, sessions, {
       onDayHeaderClick: (dayIndex) => {
@@ -130,6 +143,8 @@ function render() {
     if (weekNavDirection) {
       viewContainer.classList.add(weekNavDirection === 'next' ? 'week-grid-enter-next' : 'week-grid-enter-prev');
       weekNavDirection = null;
+    } else if (tabSwitched) {
+      viewContainer.classList.add('view-enter-right');
     }
   } else {
     weekNavDirection = null; // Slide-Animation ist nur fuer die Rasteransicht gedacht
@@ -421,12 +436,6 @@ function showMainMenu() {
     closeOverlay(overlay);
     showVacationDialog();
   });
-  if (view === 'week') {
-    addMenuButton(box, 'Plan drucken / als PDF …', () => {
-      closeOverlay(overlay);
-      window.print();
-    });
-  }
   if (view === 'week' || view === 'day') {
     addMenuButton(box, 'Diese Woche zurücksetzen …', () => {
       closeOverlay(overlay);

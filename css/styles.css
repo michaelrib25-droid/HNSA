@@ -1,5 +1,10 @@
 :root {
   color-scheme: dark;
+  /* Geteilte Akzentfarben mit dem HTPA-Projekt, fuer ein einheitliches Erscheinungsbild
+     zwischen den Apps: --accent fuer primaere Navigation/Aktionen, --accent-2 als
+     zurueckhaltenderer zweiter Akzent. */
+  --accent: #4f6df5;
+  --accent-2: #2dd4bf;
 }
 * {
   box-sizing: border-box;
@@ -62,7 +67,7 @@ html, body {
   font-size: 0.85rem;
 }
 .app-header-tabs button.active {
-  background: #4f6df5;
+  background: var(--accent);
   color: white;
 }
 .app-header-menu-btn {
@@ -96,6 +101,18 @@ html, body {
   font-size: 0.85rem;
   font-weight: 600;
 }
+.week-nav-today-btn {
+  border: 1px solid var(--accent-2);
+  color: var(--accent-2);
+}
+
+@keyframes btn-press-flash {
+  from { transform: scale(1.12); filter: brightness(1.5); }
+  to { transform: scale(1); filter: brightness(1); }
+}
+.btn-press-flash {
+  animation: btn-press-flash 220ms ease-out;
+}
 
 @keyframes slide-in-from-right {
   from { transform: translateX(24px); opacity: 0; }
@@ -109,6 +126,12 @@ html, body {
   animation: slide-in-from-right 180ms ease-out;
 }
 .week-grid-enter-prev {
+  animation: slide-in-from-left 180ms ease-out;
+}
+.view-enter-right {
+  animation: slide-in-from-right 180ms ease-out;
+}
+.view-enter-left {
   animation: slide-in-from-left 180ms ease-out;
 }
 
@@ -208,7 +231,7 @@ html, body {
 }
 .upcoming-item {
   background: #22223b;
-  border-left: 4px solid #4f6df5;
+  border-left: 4px solid var(--accent);
   border-radius: 6px;
   padding: 10px 12px;
   margin-bottom: 8px;
@@ -251,7 +274,7 @@ html, body {
 }
 .day-detail-item {
   background: #22223b;
-  border-left: 4px solid #4f6df5;
+  border-left: 4px solid var(--accent);
   border-radius: 6px;
   padding: 10px 12px;
   margin-bottom: 8px;
@@ -265,7 +288,7 @@ html, body {
   width: 100%;
   padding: 12px;
   margin-top: 12px;
-  background: #4f6df5;
+  background: var(--accent);
   color: white;
   border: none;
   border-radius: 10px;
@@ -344,12 +367,4 @@ html, body {
 }
 .color-swatch:active {
   border-color: #f5f5f7;
-}
-
-@media print {
-  .app-header-tabs button,
-  .app-header-menu-btn,
-  .week-nav button {
-    visibility: hidden;
-  }
 }

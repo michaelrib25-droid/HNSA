@@ -10,11 +10,15 @@ function genId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-// Kategorische Palette fuer bis zu 8 Schueler, validiert auf CVD-Sicherheit und
-// Kontrast gegen den dunklen Seitenhintergrund (#22223b) - siehe dataviz-Skill.
+// Kategorische Palette fuer bis zu 12 Schueler. Block-Text ist immer weiss, also
+// ist jede Farbe so abgestuft, dass sie >=4.5:1 Kontrast gegen Weiss UND >=3:1
+// gegen den dunklen Seitenhintergrund (#1a1a2e) hat; alle 12 zusammen bestehen
+// die CVD-Trennung, Chroma- und Helligkeits-Checks des dataviz-Skills (adjacent
+// pairs, dark mode) in dieser Reihenfolge - siehe scripts/validate_palette.js.
 export const PALETTE = [
-  '#3987e5', '#d95926', '#199e70', '#c98500',
-  '#d55181', '#008300', '#9085e9', '#e66767'
+  '#3277cc', '#c85122', '#148760', '#a36b00',
+  '#c54b77', '#008300', '#756cc0', '#bf5555',
+  '#11809f', '#b0621c', '#ad55a2', '#518308'
 ];
 
 function hashColor(name) {
@@ -23,33 +27,6 @@ function hashColor(name) {
     hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
   }
   return PALETTE[hash % PALETTE.length];
-}
-
-function channelLuminance(c) {
-  c = c / 255;
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
-
-function relativeLuminance(hex) {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return 0.2126 * channelLuminance(r) + 0.7152 * channelLuminance(g) + 0.0722 * channelLuminance(b);
-}
-
-function contrastRatio(hexA, hexB) {
-  const l1 = relativeLuminance(hexA);
-  const l2 = relativeLuminance(hexB);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-const DARK_TEXT = '#1a1a2e';
-const LIGHT_TEXT = '#ffffff';
-
-function bestTextColorFor(backgroundHex) {
-  return contrastRatio(DARK_TEXT, backgroundHex) >= contrastRatio(LIGHT_TEXT, backgroundHex) ? DARK_TEXT : LIGHT_TEXT;
 }
 
 export function kindIcon(kind) {
@@ -148,7 +125,7 @@ export const Store = {
   },
 
   textColorForName(name) {
-    return bestTextColorFor(this.colorForName(name));
+    return '#ffffff';
   },
 
   exportData() {
